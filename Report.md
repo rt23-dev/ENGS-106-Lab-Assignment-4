@@ -4,102 +4,116 @@
 
 ## Task 1: SVM Binary Classifier with Non-Linear Kernels
 
-The binary SVM was implemented by solving the dual optimization problem from Bishop (Equations 7.32–7.34 in *Pattern Recognition and Machine Learning*). The problem was recast into a form compatible with `cvxopt.solvers.qp`.
+The binary SVM was implemented by solving the dual optimization problem from Bishop (Equations 7.32–7.34). The problem was rewritten in a form compatible with `cvxopt.solvers.qp`.
 
-Let  
-\[
+Let
+
+$$
 \mathbf{T} = \mathrm{diag}(\mathbf{t})
-\]
-be the diagonal label matrix and \( K \) the kernel matrix.  
+$$
+
+be the diagonal label matrix and $K$ the kernel matrix.
 
 The dual objective is:
 
-\[
-\min_{\boldsymbol{\alpha}} 
-\quad 
-\frac{1}{2} \boldsymbol{\alpha}^\top (\mathbf{T} K \mathbf{T}) \boldsymbol{\alpha}
+$$
+\min_{\boldsymbol{\alpha}}
+\frac{1}{2}\boldsymbol{\alpha}^\top (\mathbf{T} K \mathbf{T}) \boldsymbol{\alpha}
 - \mathbf{1}^\top \boldsymbol{\alpha}
-\]
+$$
 
 subject to:
 
-- Box constraints:  
-  \[
-  0 \leq \alpha_i \leq C
-  \]
-  encoded as:
-  \[
-  G =
-  \begin{bmatrix}
-  I \\
-  -I
-  \end{bmatrix},
-  \quad
-  h =
-  \begin{bmatrix}
-  C\mathbf{1} \\
-  \mathbf{0}
-  \end{bmatrix}
-  \]
+### Box constraints
 
-- Equality constraint:
-  \[
-  \mathbf{t}^\top \boldsymbol{\alpha} = 0
-  \]
+$$
+0 \le \alpha_i \le C
+$$
+
+encoded as:
+
+$$
+G =
+\begin{bmatrix}
+I \\
+- I
+\end{bmatrix},
+\quad
+h =
+\begin{bmatrix}
+C\mathbf{1} \\
+\mathbf{0}
+\end{bmatrix}
+$$
+
+### Equality constraint
+
+$$
+\mathbf{t}^\top \boldsymbol{\alpha} = 0
+$$
+
+---
 
 ### Support Vectors
 
-Support vectors were identified as training points where:
+Support vectors were identified as training points where
 
-\[
+$$
 \alpha_i > 10^{-5}
-\]
+$$
 
-The bias \( b \) was computed using Bishop (Equation 7.37):
+The bias $b$ was computed using:
 
-\[
-b = \frac{1}{N_{sv}} 
+$$
+b = \frac{1}{N_{sv}}
 \sum_{s \in SV}
 \left[
 t_s -
 \sum_{m \in SV}
 \alpha_m t_m k(\mathbf{x}_m, \mathbf{x}_s)
 \right]
-\]
+$$
+
+---
 
 ### Kernels Implemented
 
-1. **RBF kernel**
-   \[
-   k(\mathbf{x}, \mathbf{x}') =
-   \exp(-\gamma \|\mathbf{x} - \mathbf{x}'\|^2)
-   \]
+**RBF kernel**
 
-2. **Polynomial kernel**
-   \[
-   k(\mathbf{x}, \mathbf{x}') =
-   (\gamma \mathbf{x}^\top \mathbf{x}' + r)^d
-   \]
+$$
+k(\mathbf{x}, \mathbf{x}') =
+\exp(-\gamma \|\mathbf{x} - \mathbf{x}'\|^2)
+$$
 
-3. **Sigmoid kernel**
-   \[
-   k(\mathbf{x}, \mathbf{x}') =
-   \tanh(\gamma \mathbf{x}^\top \mathbf{x}' + r)
-   \]
+**Polynomial kernel**
 
-The RBF kernel with  
-\[
+$$
+k(\mathbf{x}, \mathbf{x}') =
+(\gamma \mathbf{x}^\top \mathbf{x}' + r)^d
+$$
+
+**Sigmoid kernel**
+
+$$
+k(\mathbf{x}, \mathbf{x}') =
+\tanh(\gamma \mathbf{x}^\top \mathbf{x}' + r)
+$$
+
+The RBF kernel with
+
+$$
 \gamma = 10^{-4}
-\]
-was selected for all experiments, as it performed most reliably in the 784-dimensional pixel space of Fashion-MNIST.
+$$
+
+was used for all experiments.
 
 ---
 
 ## Task 2: Prediction
 
-Prediction follows Bishop (Equation 7.13). For a new input \( \mathbf{x} \):
+For a new input $\mathbf{x}$:
 
-\[
+$$
 y(\mathbf{x}) =
 \mathrm{sign}
 \left(
@@ -107,28 +121,25 @@ y(\mathbf{x}) =
 \alpha_i t_i k(\mathbf{x}_i, \mathbf{x})
 + b
 \right)
-\]
+$$
 
-In implementation:
+Implementation steps:
 
-- Compute the test–support kernel matrix  
-  \[
-  K_{\text{test,sv}} \in \mathbb{R}^{n_{\text{test}} \times N_{sv}}
-  \]
-- Multiply by weighted labels  
-  \[
-  \boldsymbol{\alpha}_{sv} \odot \mathbf{t}_{sv}
-  \]
-- Add \( b \)
-- Apply `sign(·)`
+- Compute test–support kernel matrix
 
-Only support vectors are retained after training, so inference cost scales as:
+$$
+K_{\text{test,sv}} \in \mathbb{R}^{n_{\text{test}} \times N_{sv}}
+$$
 
-\[
+- Multiply by $(\boldsymbol{\alpha}_{sv} \odot \mathbf{t}_{sv})$
+- Add $b$
+- Apply `sign()`
+
+Inference cost:
+
+$$
 \mathcal{O}(N_{sv})
-\]
-
-rather than the full training size.
+$$
 
 ---
 
@@ -136,26 +147,28 @@ rather than the full training size.
 
 ### One-vs-Rest (OvR)
 
-- Train \( K = 10 \) binary classifiers
-- Each classifier distinguishes one class from all others
-- Prediction selects the class with the highest raw decision score
+- Train $K = 10$ binary classifiers
+- Each classifier separates one class vs all others
+- Choose class with highest decision score
 
 ### One-vs-One (OvO)
 
-- Train \( \binom{K}{2} = 45 \) binary classifiers
-- Each classifier is trained only on data from two classes
-- Prediction via majority vote across all classifiers
+- Train $\binom{10}{2} = 45$ binary classifiers
+- Each classifier trained on only two classes
+- Prediction by majority vote
 
 ---
 
-### Results (RBF kernel, \( C = 1.0 \))
+### Results (RBF kernel, $C = 1.0$)
 
 | Metric | One-vs-Rest | One-vs-One |
-|---------|-------------|------------|
+|--------|------------|------------|
 | Classifiers trained | 10 | 45 |
 | Training time | 87.4 s | 7.3 s |
 | Prediction time | 0.07 s | 0.24 s |
 | Overall accuracy | 66.00% | 73.00% |
+
+---
 
 ### Per-Class Accuracy
 
@@ -172,56 +185,63 @@ rather than the full training size.
 | Bag | 93.75% | 81.25% |
 | Ankle boot | 90.91% | 86.36% |
 
+---
+
 ### Analysis
 
-- OvO improves overall accuracy by **7 percentage points**.
-- OvR catastrophically fails on **Pullover** and **Shirt** (0%).
-- OvR struggles because the “rest” class is heterogeneous.
-- OvO simplifies each decision boundary to a clean pairwise separation.
-- OvO trains faster despite more classifiers because each QP is much smaller.
-- OvO predicts slower due to aggregation over 45 classifiers.
+- OvO improves accuracy by 7 percentage points.
+- OvR fails on Pullover and Shirt (0%).
+- OvR struggles because the "rest" class is heterogeneous.
+- OvO simplifies each boundary to pairwise separation.
+- OvO trains faster because each QP is smaller.
+- OvO predicts slower due to voting across 45 models.
 
 ---
 
-## Task 4: Hyperparameter Tuning — Regularization Parameter \( C \)
+## Task 4: Hyperparameter Tuning — Regularization Parameter $C$
 
-The parameter \( C \) controls the margin–slack tradeoff:
+$C$ controls the margin–slack tradeoff:
 
-- Large \( C \): narrow margin, low bias, high variance
-- Small \( C \): wider margin, more regularization
+- Large $C$: narrow margin, high variance
+- Small $C$: wider margin, more regularization
 
 ### Strategy
 
-3-fold stratified cross-validation  
-400-sample balanced subset (40 per class)  
-OvR used for efficiency
+- 3-fold stratified cross-validation
+- 400-sample balanced subset
+- OvR used for efficiency
 
-**Stage 1 — Coarse Search**
+---
 
-\[
-C \in [0.1, 10{,}000]
-\]
+### Stage 1 — Coarse Search
 
-Using:
+$$
+C \in [0.1, 10^{4}]
+$$
+
 ```python
 np.logspace(-1, 4, 12)
 ```
 
-**Stage 2 — Fine Search**
+---
 
-\[
-C \in \left[
+### Stage 2 — Fine Search
+
+$$
+C \in
+\left[
 10^{\log_{10}(C^*) - 0.5},
 10^{\log_{10}(C^*) + 0.5}
 \right]
-\]
+$$
 
-Using:
 ```python
 np.logspace(np.log10(C_star) - 0.5,
             np.log10(C_star) + 0.5,
             8)
 ```
+
+---
 
 ### Results
 
@@ -230,53 +250,41 @@ np.logspace(np.log10(C_star) - 0.5,
 | Coarse | 433 | 79.00% ± 0.98% |
 | Fine | 367.2 | 79.50% ± 0.87% |
 
-Accuracy rises sharply from \( C=0.1 \) (~10%) to a plateau around \( C \approx 50–500 \) (~79%), then declines slightly beyond \( C > 1000 \), indicating mild overfitting.
-
 Final choice:
 
-\[
+$$
 C = 367.2
-\]
+$$
 
 ---
 
-## Task 5: Multiclass Confusion Matrices
+## Task 5: Confusion Matrix Observations
 
 Final model:
 
 - OvR
-- \( C = 367.2 \)
+- $C = 367.2$
 - RBF kernel
-- \( \gamma = 10^{-4} \)
+- $\gamma = 10^{-4}$
 - Trained on 1800 samples
 - Tested on 200 samples
 
 ### Observations
 
-**Well-separated classes**
+Well-separated classes:
 - Trouser
 - Sandal
 - Sneaker
 - Bag
 - Ankle boot
 
-These are visually distinct categories.
-
-**Confusable classes**
+Confusable classes:
 - T-shirt/top
 - Shirt
 - Pullover
 - Coat
 
-These share similar silhouettes in raw pixel space.
-
-**OvR vs OvO error distribution**
-- OvR concentrates errors (Pullover & Shirt collapse to 0%)
-- OvO distributes errors more evenly
-- OvO improves robustness for ambiguous categories
-- OvR occasionally performs better for specific classes (e.g., Coat)
-
-These patterns are expected when using raw pixel features without convolutional feature extraction.
+Errors are concentrated among visually similar garments.
 
 ---
 
@@ -284,15 +292,15 @@ These patterns are expected when using raw pixel features without convolutional 
 
 | Task | Key Finding |
 |------|------------|
-| SVM Implementation | Dual QP via `cvxopt`; support vectors at \( \alpha_i > 10^{-5} \); bias via Bishop 7.37 |
-| Prediction | Efficient matrix–vector product over support vectors; \( \mathcal{O}(N_{sv}) \) inference |
-| OvR vs OvO | OvO +7% accuracy; OvR faster to train but unstable for ambiguous classes |
-| Hyperparameter Tuning | Two-stage log-space CV; optimal \( C \approx 367 \) |
-| Confusion Analysis | Main errors among top-wear garments; shoes and bags cleanly separated |
+| SVM Implementation | Dual QP via `cvxopt`; support vectors at $\alpha_i > 10^{-5}$ |
+| Prediction | $\mathcal{O}(N_{sv})$ inference |
+| OvR vs OvO | OvO +7% accuracy |
+| Hyperparameter Tuning | Optimal $C \approx 367$ |
+| Confusion Analysis | Errors among similar top-wear categories |
 
 ---
 
 **Dataset:** Fashion-MNIST (2,000 samples)  
-**Kernel:** RBF, \( \gamma = 10^{-4} \)  
-**Final \( C \):** 367.2  
-**Implementation:** NumPy + cvxopt (from first principles)
+**Kernel:** RBF ($\gamma = 10^{-4}$)  
+**Final $C$:** 367.2  
+**Implementation:** NumPy + cvxopt
