@@ -18,8 +18,7 @@ The dual objective is:
 
 $$
 \min_{\boldsymbol{\alpha}}
-\frac{1}{2}\boldsymbol{\alpha}^\top (\mathbf{T} K \mathbf{T}) \boldsymbol{\alpha}
-- \mathbf{1}^\top \boldsymbol{\alpha}
+\frac{1}{2}\boldsymbol{\alpha}^\top (\mathbf{T} K \mathbf{T}) \boldsymbol{\alpha} - \mathbf{1}^\top \boldsymbol{\alpha}
 $$
 
 subject to:
