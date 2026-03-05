@@ -45,9 +45,7 @@ and let \(K\) denote the kernel matrix.
 The dual optimization problem is:
 
 $$
-\min_{\boldsymbol{\alpha}}
-\frac{1}{2}\boldsymbol{\alpha}^T (\mathbf{T}K\mathbf{T})\boldsymbol{\alpha}
-- \mathbf{1}^T \boldsymbol{\alpha}
+\min_{\boldsymbol{\alpha}}\frac{1}{2}\boldsymbol{\alpha}^T (\mathbf{T}K\mathbf{T})\boldsymbol{\alpha} - \mathbf{1}^T \boldsymbol{\alpha}
 $$
 
 subject to
