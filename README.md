@@ -1,285 +1,46 @@
-# ML Lab 401 — Support Vector Machines
+ML Lab 401: Support Vector Machines
+Overview
+In this assignment, you will implement and analyze a Support Vector Machine (SVM).
 
-**Name:** Rohan Taneja  
-**Dataset:** Fashion-MNIST  
-**Implementation:** NumPy + CVXOPT  
+In this repository, we have included a dataset, fashion-mnist_train.csv, containing a sample of the Fashion MNIST benchmark. This dataset consists of 28x28 grayscale images of 10 categories of clothing items (T-shirt/top, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag, Ankle boot). In this lab, you will develop predictive models for this data set and write a report on your findings. You will have less guidance in this lab, as you have more experience in the programming environment and we want you to have more ownership of your work. If you have questions, please reach out early and often.
 
----
+Please read through all of the files associated with this Lab Assignment before you start the assignment.
 
-# 1. Introduction
+Problem Statement
+In this lab, you have 5 tasks, which are discussed in greater detail within the notebook assignment4.ipynb. Broadly, the tasks are as follows:
 
-In this assignment we implement a **Support Vector Machine (SVM)** classifier from first principles using the dual optimization formulation described in Bishop’s *Pattern Recognition and Machine Learning*.  
+Train a SVM to perform binary classification with non-linear kernels.
+Implement a predictive model.
+Compare the performance of two voting schemes (one-vs-rest and one-vs-one).
+Discuss your strategy for hyperparameter tuning.
+Generate multiclass confusion matrices for your model.
+Goals of This Lab
+We are asking you to complete this assignment because we want you to:
 
-The goals of this lab are to:
+Gain experience constructing and analyzing SVMs.
+Continue to practice implementing machine learning algorithms from first principles (we'll need this in hardware).
+Practice writing succinct reports with clear figures on a complex topic.
+Expectations
+You are not allowed to import an SVM from, for instance, scikit-learn unless specified.
 
-- Implement a binary SVM using quadratic programming
-- Implement kernel functions
-- Extend the classifier to multiclass classification
-- Compare **One-vs-Rest (OvR)** and **One-vs-One (OvO)** strategies
-- Perform hyperparameter tuning for the regularization parameter \(C\)
-- Evaluate performance using confusion matrices
+You may, however, use a library (such as scipy.optimize.minimize or cvxopt.solvers.qp) for the optimization process. The code to install the cvxopt library is included in the first code cell, if needed.
 
-Experiments were conducted using a subset of the **Fashion-MNIST dataset**, which contains grayscale images of clothing items.
+All lab submissions are individual and every item you submit should be a reflection of your own work. You should have ownership over the entirety of any lab you submit in this course. While your work is your own, we understand that it can be helpful in learning machine learning to collaborate with your peers, which can range from high-level discussion of a problem to debugging. Having others look at our code encourages us to write code with readability in mind. In practice, we will never work in a silo, and being able to discuss these topics with others well is a valuable skill. When you collaborate with another student, please cite them appropriately and be respectful of sharing too much. The Academic Honor Principle applies.
 
----
+We respectfully ask that in the interest in furthering your own understanding of the material, that you refrain from using generative AI to code for you. Your work should be your own and you should feel comfortable justifying each design decision you make.
 
-# 2. Dataset and Preprocessing
+Please cite any outside sources you reference.
 
-The dataset used is **Fashion-MNIST**, which contains \(28 \times 28\) grayscale images of clothing items across 10 categories.
+Important
 
-For computational efficiency:
+Finally, you will get the most out of this assignment if you give yourself time to be playful and curious in your experimentation.
 
-- Only **2000 samples** were used.
-- The dataset was split using `train_test_split`.
-- **90% training data**
-- **10% test data**
+Evaluation
+You will be evaluated on the quality of your code and report. Your report must provide summaries of each method's performance and some additional details of your implementation. Compare the relative strengths and weaknesses of the methods based on both the experimental results and your understanding of the algorithms.
 
-Each image was represented as a **784-dimensional feature vector** obtained by flattening the pixel values.
+What to Submit
+Please submit the following:
 
-### Example Image from Dataset
+Your completed notebook: assignment4.ipynb, where the output of each cell is clearly displayed.
 
-The following figure shows a randomly sampled image from the dataset.
-
-<img width="790" height="832" alt="image" src="https://github.com/user-attachments/assets/d9002dc9-8f1c-4568-8ad5-7bb59a108fa4" />
-
-
----
-
-# 3. Support Vector Machine Formulation
-
-The SVM classifier was implemented using the **dual optimization formulation**.
-
-Let the training labels be:
-
-\[
-t_i \in \{-1,1\}
-\]
-
-Define the diagonal label matrix:
-
-\[
-T = \text{diag}(t)
-\]
-
-Let \(K\) denote the kernel matrix.
-
-The dual objective function is:
-
-\[
-\min_{\alpha}
-\frac{1}{2}\alpha^T (TKT)\alpha - 1^T\alpha
-\]
-
-subject to
-
-\[
-0 \leq \alpha_i \leq C
-\]
-
-and
-
-\[
-t^T\alpha = 0
-\]
-
-The quadratic optimization problem was solved using the **CVXOPT solver**.
-
----
-
-# 4. Kernel Functions
-
-Three kernel functions were implemented.
-
-### Radial Basis Function (RBF)
-
-\[
-k(x,x') = \exp(-\gamma ||x-x'||^2)
-\]
-
-### Polynomial Kernel
-
-\[
-k(x,x') = (\gamma x^Tx' + r)^d
-\]
-
-### Sigmoid Kernel
-
-\[
-k(x,x') = \tanh(\gamma x^Tx' + r)
-\]
-
-After testing, the **RBF kernel** was used for the main experiments since it provided the most stable performance on the high-dimensional image data.
-
----
-
-# 5. Support Vectors and Bias
-
-After solving the optimization problem, support vectors were identified as samples satisfying
-
-\[
-\alpha_i > 10^{-5}
-\]
-
-The bias term was computed using the support vectors according to the standard SVM formulation.
-
-Only support vectors are retained after training, which significantly reduces prediction cost.
-
----
-
-# 6. Prediction
-
-Predictions for a new input \(x\) are computed as
-
-\[
-y(x) =
-\text{sign}\left(
-\sum_{i \in SV} \alpha_i t_i k(x_i,x) + b
-\right)
-\]
-
-Since the model only uses support vectors, the prediction complexity scales with the number of support vectors rather than the full training set.
-
----
-
-# 7. Multiclass Classification
-
-Since Fashion-MNIST contains **10 classes**, two strategies were implemented.
-
----
-
-## 7.1 One-vs-Rest (OvR)
-
-- Train **10 binary classifiers**
-- Each classifier separates **one class vs all other classes**
-- The class with the highest decision score is selected
-
----
-
-## 7.2 One-vs-One (OvO)
-
-- Train classifiers for **every pair of classes**
-- Total classifiers:
-
-\[
-\binom{10}{2} = 45
-\]
-
-- Prediction uses **majority voting** across all classifiers.
-
----
-
-# 8. Model Performance
-
-Both multiclass approaches were evaluated in terms of:
-
-- training time
-- prediction time
-- classification accuracy
-
-### Comparison of OvR and OvO
-
-| Metric | One-vs-Rest | One-vs-One |
-|------|------|------|
-| Number of classifiers | 10 | 45 |
-| Training time | Higher | Lower |
-| Prediction time | Faster | Slower |
-| Accuracy | Lower | Higher |
-
-OvO generally achieved better accuracy because each classifier only separates two classes, resulting in simpler decision boundaries.
-
----
-
-# 9. Hyperparameter Tuning
-
-The regularization parameter \(C\) controls the tradeoff between margin width and classification error.
-
-- Large \(C\) → narrow margin, lower bias
-- Small \(C\) → wider margin, stronger regularization
-
-A **two-stage search strategy** was used.
-
-### Stage 1 — Coarse Search
-
-Values of \(C\) were explored on a logarithmic scale:
-
-```
-np.logspace(-1,4,12)
-```
-
-### Stage 2 — Fine Search
-
-A finer search was performed around the best coarse value.
-
-The final selected value was approximately:
-
-\[
-C \approx 367
-\]
-
----
-
-# 10. Cross-Validation Results
-
-The following figure shows validation accuracy as a function of \(C\).
-
-<img width="1589" height="611" alt="image" src="https://github.com/user-attachments/assets/f4d08152-e27f-4508-aea4-ee6d76cfb565" />
-
-The results show that performance increases rapidly for small values of \(C\), then stabilizes before slightly decreasing due to overfitting.
-
----
-
-# 11. Confusion Matrix
-
-The final classifier was evaluated using a confusion matrix.
-
-<img width="498" height="438" alt="image" src="https://github.com/user-attachments/assets/d5ed7c3b-4d8b-4e15-9ff4-46ec1731f87f" />
-
-
----
-
-# 12. Error Analysis
-
-The confusion matrix reveals several patterns.
-
-### Well-classified categories
-
-- Trouser
-- Sandal
-- Sneaker
-- Bag
-- Ankle boot
-
-These classes have distinct shapes and are easier to separate.
-
-### Frequently confused categories
-
-- T-shirt/top
-- Shirt
-- Pullover
-- Coat
-
-These items have similar silhouettes, making them harder to distinguish using raw pixel features.
-
----
-
-# 13. Conclusion
-
-In this assignment we implemented an SVM classifier from scratch and applied it to the Fashion-MNIST dataset.
-
-Key findings:
-
-- SVM training can be formulated as a **quadratic optimization problem**.
-- Kernel functions enable the learning of **nonlinear decision boundaries**.
-- **One-vs-One classification generally performs better** than One-vs-Rest.
-- Hyperparameter tuning of \(C\) significantly affects model performance.
-- Most classification errors occur between visually similar clothing categories.
-
-This experiment demonstrates both the strengths and limitations of SVMs when applied directly to raw image pixels.
-
----
-
-# References
-
-Christopher M. Bishop  
-*Pattern Recognition and Machine Learning*  
-Chapter 7 — Support Vector Machines
+A brief write-up that answers the 5 questions posed in this lab and justifies your model. Ensure that any figures you create are accessible and easy to understand.
