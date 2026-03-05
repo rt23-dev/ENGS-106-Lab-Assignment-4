@@ -90,7 +90,7 @@ After experimentation, the **RBF kernel** was selected for all experiments becau
 
 Parameters used:
 
-- \( \gamma = 10^{-4} \)
+\( \gamma = 10^{-4} \)
 
 ---
 
