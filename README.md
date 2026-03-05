@@ -1,7 +1,6 @@
 # ML Lab 401 — Support Vector Machines
 
 **Name:** Rohan Taneja  
-**Course:** ML Lab 401  
 **Dataset:** Fashion-MNIST  
 **Implementation:** NumPy + CVXOPT  
 
@@ -9,298 +8,273 @@
 
 # 1. Introduction
 
-In this lab we implemented a **Support Vector Machine (SVM)** classifier from first principles using the dual optimization formulation described in Bishop's *Pattern Recognition and Machine Learning*.  
+In this assignment we implement a **Support Vector Machine (SVM)** classifier from first principles using the dual optimization formulation described in Bishop’s *Pattern Recognition and Machine Learning*.  
 
-The objectives of the lab were:
+The goals of this lab are to:
 
 - Implement a binary SVM using quadratic programming
 - Implement kernel functions
 - Extend the classifier to multiclass classification
-- Compare **One-vs-Rest (OvR)** and **One-vs-One (OvO)**
+- Compare **One-vs-Rest (OvR)** and **One-vs-One (OvO)** strategies
 - Perform hyperparameter tuning for the regularization parameter \(C\)
-- Analyze model performance using confusion matrices
+- Evaluate performance using confusion matrices
 
-The experiments were conducted on a subset of the **Fashion-MNIST dataset**, which consists of grayscale images of clothing items.
+Experiments were conducted using a subset of the **Fashion-MNIST dataset**, which contains grayscale images of clothing items.
 
 ---
 
-# 2. Binary SVM Formulation
+# 2. Dataset and Preprocessing
 
-The SVM was implemented using the **dual optimization problem**.
+The dataset used is **Fashion-MNIST**, which contains \(28 \times 28\) grayscale images of clothing items across 10 categories.
 
-Let the training labels be
+For computational efficiency:
 
-$$
-\mathbf{t} \in \{-1,1\}^N
-$$
+- Only **2000 samples** were used.
+- The dataset was split using `train_test_split`.
+- **90% training data**
+- **10% test data**
+
+Each image was represented as a **784-dimensional feature vector** obtained by flattening the pixel values.
+
+### Example Image from Dataset
+
+The following figure shows a randomly sampled image from the dataset.
+
+<img width="790" height="832" alt="image" src="https://github.com/user-attachments/assets/d9002dc9-8f1c-4568-8ad5-7bb59a108fa4" />
+
+
+---
+
+# 3. Support Vector Machine Formulation
+
+The SVM classifier was implemented using the **dual optimization formulation**.
+
+Let the training labels be:
+
+\[
+t_i \in \{-1,1\}
+\]
 
 Define the diagonal label matrix:
 
-$$
-\mathbf{T} = \mathrm{diag}(\mathbf{t})
-$$
+\[
+T = \text{diag}(t)
+\]
 
-and let \(K\) denote the kernel matrix.
+Let \(K\) denote the kernel matrix.
 
-The dual optimization problem is:
+The dual objective function is:
 
-$$
-\min_{\boldsymbol{\alpha}}\frac{1}{2}\boldsymbol{\alpha}^T (\mathbf{T}K\mathbf{T})\boldsymbol{\alpha} - \mathbf{1}^T \boldsymbol{\alpha}
-$$
+\[
+\min_{\alpha}
+\frac{1}{2}\alpha^T (TKT)\alpha - 1^T\alpha
+\]
 
 subject to
 
-$$
-0 \le \alpha_i \le C
-$$
+\[
+0 \leq \alpha_i \leq C
+\]
 
 and
 
-$$
-\mathbf{t}^T \boldsymbol{\alpha} = 0
-$$
+\[
+t^T\alpha = 0
+\]
 
-The problem was solved using the **CVXOPT quadratic programming solver**.
+The quadratic optimization problem was solved using the **CVXOPT solver**.
 
 ---
 
-# 3. Kernel Functions
+# 4. Kernel Functions
 
 Three kernel functions were implemented.
 
 ### Radial Basis Function (RBF)
 
-$$
+\[
 k(x,x') = \exp(-\gamma ||x-x'||^2)
-$$
+\]
 
 ### Polynomial Kernel
 
-$$
+\[
 k(x,x') = (\gamma x^Tx' + r)^d
-$$
+\]
 
 ### Sigmoid Kernel
 
-$$
+\[
 k(x,x') = \tanh(\gamma x^Tx' + r)
-$$
+\]
 
-After experimentation, the **RBF kernel** was selected for all experiments because it performed most reliably on the high-dimensional pixel data.
-
-Parameters used:
-
-\( \gamma = 10^{-4} \)
+After testing, the **RBF kernel** was used for the main experiments since it provided the most stable performance on the high-dimensional image data.
 
 ---
 
-# 4. Support Vectors and Bias
+# 5. Support Vectors and Bias
 
-Support vectors were defined as training points where
+After solving the optimization problem, support vectors were identified as samples satisfying
 
-$$
+\[
 \alpha_i > 10^{-5}
-$$
+\]
 
-The bias term was computed as
+The bias term was computed using the support vectors according to the standard SVM formulation.
 
-$$
-b = \frac{1}{N_{sv}}
-\sum_{s\in SV}
-\left[
-t_s -
-\sum_{m\in SV} \alpha_m t_m k(x_m,x_s)
-\right]
-$$
+Only support vectors are retained after training, which significantly reduces prediction cost.
 
 ---
 
-# 5. Prediction
+# 6. Prediction
 
-Predictions were computed using
+Predictions for a new input \(x\) are computed as
 
-$$
+\[
 y(x) =
-\text{sign}
-\left(
-\sum_{i\in SV}\alpha_i t_i k(x_i,x) + b
+\text{sign}\left(
+\sum_{i \in SV} \alpha_i t_i k(x_i,x) + b
 \right)
-$$
+\]
 
-Since only support vectors are retained after training, the prediction complexity becomes
-
-$$
-O(N_{sv})
-$$
-
-which is significantly smaller than using the full training dataset.
+Since the model only uses support vectors, the prediction complexity scales with the number of support vectors rather than the full training set.
 
 ---
 
-# 6. Multiclass Classification
+# 7. Multiclass Classification
 
-Because Fashion-MNIST contains **10 classes**, two strategies were implemented.
+Since Fashion-MNIST contains **10 classes**, two strategies were implemented.
 
 ---
 
-## 6.1 One-vs-Rest (OvR)
+## 7.1 One-vs-Rest (OvR)
 
 - Train **10 binary classifiers**
-- Each classifier distinguishes **one class vs all others**
-- Prediction selects the class with the highest decision score
+- Each classifier separates **one class vs all other classes**
+- The class with the highest decision score is selected
 
 ---
 
-## 6.2 One-vs-One (OvO)
+## 7.2 One-vs-One (OvO)
 
-- Train **45 classifiers** (all class pairs)
-- Each classifier is trained using only two classes
-- Prediction uses **majority voting**
+- Train classifiers for **every pair of classes**
+- Total classifiers:
 
----
+\[
+\binom{10}{2} = 45
+\]
 
-# 7. Dataset Examples
-
-The following figure shows example images from the Fashion-MNIST dataset used in the experiment.
-
-![Figure 1: Example Fashion-MNIST images](images/sample_images.png)
+- Prediction uses **majority voting** across all classifiers.
 
 ---
 
-# 8. Kernel Behavior Visualization
+# 8. Model Performance
 
-The following figure illustrates the behavior of the kernel functions used in the model.
+Both multiclass approaches were evaluated in terms of:
 
-![Figure 2: Kernel function visualization](images/kernel_plot.png)
+- training time
+- prediction time
+- classification accuracy
 
----
-
-# 9. OvR vs OvO Results
-
-Experiments were conducted using:
-
-- RBF Kernel
-- \(C = 1.0\)
+### Comparison of OvR and OvO
 
 | Metric | One-vs-Rest | One-vs-One |
 |------|------|------|
-| Classifiers trained | 10 | 45 |
-| Training time | 87.4 s | 7.3 s |
-| Prediction time | 0.07 s | 0.24 s |
-| Accuracy | 66% | 73% |
+| Number of classifiers | 10 | 45 |
+| Training time | Higher | Lower |
+| Prediction time | Faster | Slower |
+| Accuracy | Lower | Higher |
 
-### Discussion
-
-The **One-vs-One strategy produced higher accuracy** because each classifier only needs to separate two classes, resulting in simpler decision boundaries.
-
-However, OvO requires evaluating many classifiers during prediction.
+OvO generally achieved better accuracy because each classifier only separates two classes, resulting in simpler decision boundaries.
 
 ---
 
-# 10. Hyperparameter Tuning
+# 9. Hyperparameter Tuning
 
 The regularization parameter \(C\) controls the tradeoff between margin width and classification error.
 
-- Large \(C\) → narrow margin, less regularization  
-- Small \(C\) → wider margin, stronger regularization  
+- Large \(C\) → narrow margin, lower bias
+- Small \(C\) → wider margin, stronger regularization
 
-A **two-stage search** was used.
+A **two-stage search strategy** was used.
 
----
+### Stage 1 — Coarse Search
 
-## Coarse Search
+Values of \(C\) were explored on a logarithmic scale:
 
-$$
-C \in [0.1, 10^4]
-$$
-
-```python
+```
 np.logspace(-1,4,12)
 ```
 
----
+### Stage 2 — Fine Search
 
-## Fine Search
+A finer search was performed around the best coarse value.
 
-```python
-np.logspace(np.log10(C_star)-0.5,
-            np.log10(C_star)+0.5,
-            8)
-```
+The final selected value was approximately:
 
----
-
-## Cross Validation Results
-
-| Stage | Best C | CV Accuracy |
-|------|------|------|
-| Coarse | 433 | 79.0% |
-| Fine | 367.2 | 79.5% |
-
-Final value used:
-
-$$
-C = 367.2
-$$
+\[
+C \approx 367
+\]
 
 ---
 
-# 11. Cross-Validation Accuracy Plot
+# 10. Cross-Validation Results
 
-The following figure shows accuracy as a function of \(C\).
+The following figure shows validation accuracy as a function of \(C\).
 
-![Figure 3: Cross-validation accuracy vs C](images/cv_plot.png)
+<img width="1589" height="611" alt="image" src="https://github.com/user-attachments/assets/f4d08152-e27f-4508-aea4-ee6d76cfb565" />
 
-The results show that performance increases rapidly for small values of \(C\), then plateaus before slightly declining due to overfitting.
-
----
-
-# 12. Confusion Matrix
-
-The confusion matrix below shows the classification results of the final model.
-
-![Figure 4: Confusion Matrix](images/confusion_matrix.png)
+The results show that performance increases rapidly for small values of \(C\), then stabilizes before slightly decreasing due to overfitting.
 
 ---
 
-# 13. Error Analysis
+# 11. Confusion Matrix
 
-The confusion matrix reveals several patterns:
+The final classifier was evaluated using a confusion matrix.
 
-### Well separated classes
+<img width="498" height="438" alt="image" src="https://github.com/user-attachments/assets/d5ed7c3b-4d8b-4e15-9ff4-46ec1731f87f" />
+
+
+---
+
+# 12. Error Analysis
+
+The confusion matrix reveals several patterns.
+
+### Well-classified categories
+
 - Trouser
 - Sandal
 - Sneaker
 - Bag
 - Ankle boot
 
-These classes have visually distinctive shapes.
+These classes have distinct shapes and are easier to separate.
 
-### Frequently confused classes
+### Frequently confused categories
+
 - T-shirt/top
 - Shirt
 - Pullover
 - Coat
 
-These categories share similar silhouettes in the raw pixel representation.
-
-Without convolutional feature extraction, the classifier relies purely on pixel similarity.
+These items have similar silhouettes, making them harder to distinguish using raw pixel features.
 
 ---
 
-# 14. Conclusion
+# 13. Conclusion
 
-In this lab we successfully implemented a Support Vector Machine from first principles.
+In this assignment we implemented an SVM classifier from scratch and applied it to the Fashion-MNIST dataset.
 
 Key findings:
 
-- SVM training can be formulated as a **quadratic optimization problem**
-- Kernel functions allow the model to learn **nonlinear decision boundaries**
-- **One-vs-One classification outperformed One-vs-Rest**
-- Hyperparameter tuning improved classification accuracy
-- Errors mainly occur between visually similar clothing items
+- SVM training can be formulated as a **quadratic optimization problem**.
+- Kernel functions enable the learning of **nonlinear decision boundaries**.
+- **One-vs-One classification generally performs better** than One-vs-Rest.
+- Hyperparameter tuning of \(C\) significantly affects model performance.
+- Most classification errors occur between visually similar clothing categories.
 
-The experiment demonstrates both the strengths and limitations of SVMs when applied directly to raw pixel data.
+This experiment demonstrates both the strengths and limitations of SVMs when applied directly to raw image pixels.
 
 ---
 
