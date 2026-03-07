@@ -1,35 +1,60 @@
-# ML Lab 401: Support Vector Machines — Lab Report
+# ML Lab 401 — Support Vector Machines
+
+## Dataset
+
+**Dataset:** Fashion-MNIST (subset of 2000 samples)  
+**Training set:** 1800 samples  
+**Test set:** 200 samples  
+
+The Fashion-MNIST dataset contains grayscale images of clothing items belonging to **10 classes**:
+
+- T-shirt/top
+- Trouser
+- Pullover
+- Dress
+- Coat
+- Sandal
+- Shirt
+- Sneaker
+- Bag
+- Ankle boot
+
+All models were implemented using **NumPy** and the quadratic programming solver **CVXOPT**.
 
 ---
 
-## Task 1: SVM Binary Classifier with Non-Linear Kernels
+# Task 1 — SVM Binary Classifier with Non-Linear Kernels
 
-The binary SVM was implemented by solving the dual optimization problem from Bishop (Equations 7.32–7.34). The problem was rewritten in a form compatible with `cvxopt.solvers.qp`.
+The Support Vector Machine was implemented by solving the **dual optimization problem** described in *Bishop (Equations 7.32–7.34)*.
 
 Let
 
 $$
-\mathbf{T} = \mathrm{diag}(\mathbf{t})
+T = \mathrm{diag}(t)
 $$
 
-be the diagonal label matrix and $K$ the kernel matrix.
+be the diagonal matrix of labels and \(K\) the kernel matrix.
 
-The dual objective is:
+The dual optimization problem becomes
 
 $$
-\min_{\boldsymbol{\alpha}}
-\frac{1}{2}\boldsymbol{\alpha}^\top (\mathbf{T} K \mathbf{T}) \boldsymbol{\alpha} - \mathbf{1}^\top \boldsymbol{\alpha}
+\min_{\alpha}
+\frac{1}{2}\alpha^T (TKT)\alpha - \mathbf{1}^T \alpha
 $$
 
-subject to:
+subject to the following constraints.
 
-### Box constraints
+---
+
+## Box Constraints
+
+Each Lagrange multiplier must satisfy
 
 $$
 0 \le \alpha_i \le C
 $$
 
-encoded as:
+This was encoded for the QP solver as
 
 $$
 G =
@@ -41,138 +66,187 @@ I \\
 h =
 \begin{bmatrix}
 C\mathbf{1} \\
-\mathbf{0}
+0
 \end{bmatrix}
-$$
-
-### Equality constraint
-
-$$
-\mathbf{t}^\top \boldsymbol{\alpha} = 0
 $$
 
 ---
 
-### Support Vectors
+## Equality Constraint
 
-Support vectors were identified as training points where
+The dual formulation also requires
+
+$$
+t^T \alpha = 0
+$$
+
+This ensures the resulting separating hyperplane satisfies the optimality conditions of the SVM.
+
+---
+
+## Support Vector Identification
+
+After solving the quadratic program, support vectors were identified as samples with
 
 $$
 \alpha_i > 10^{-5}
 $$
 
-The bias $b$ was computed using:
+Only these samples influence the final decision boundary.
+
+---
+
+## Bias Calculation
+
+The bias term \(b\) was computed using the average over all support vectors:
 
 $$
-b = \frac{1}{N_{sv}}
+b =
+\frac{1}{N_{sv}}
 \sum_{s \in SV}
 \left[
 t_s -
 \sum_{m \in SV}
-\alpha_m t_m k(\mathbf{x}_m, \mathbf{x}_s)
+\alpha_m t_m k(x_m,x_s)
 \right]
 $$
 
 ---
 
-### Kernels Implemented
+## Kernels Implemented
 
-**RBF kernel**
+Three kernels were implemented.
 
-$$
-k(\mathbf{x}, \mathbf{x}') =
-\exp(-\gamma \|\mathbf{x} - \mathbf{x}'\|^2)
-$$
-
-**Polynomial kernel**
+### RBF Kernel
 
 $$
-k(\mathbf{x}, \mathbf{x}') =
-(\gamma \mathbf{x}^\top \mathbf{x}' + r)^d
+k(x,x') = \exp(-\gamma ||x-x'||^2)
 $$
 
-**Sigmoid kernel**
+### Polynomial Kernel
 
 $$
-k(\mathbf{x}, \mathbf{x}') =
-\tanh(\gamma \mathbf{x}^\top \mathbf{x}' + r)
+k(x,x') = (\gamma x^T x' + r)^d
 $$
 
-The RBF kernel with
+### Sigmoid Kernel
+
+$$
+k(x,x') = \tanh(\gamma x^T x' + r)
+$$
+
+All experiments used the **RBF kernel** with
 
 $$
 \gamma = 10^{-4}
 $$
 
-was used for all experiments.
+because it produced the most stable results.
 
 ---
 
-## Task 2: Prediction
+# Task 2 — Prediction
 
-For a new input $\mathbf{x}$:
+For a new input \(x\), predictions are computed using
 
 $$
-y(\mathbf{x}) =
+y(x) =
 \mathrm{sign}
 \left(
 \sum_{i \in SV}
-\alpha_i t_i k(\mathbf{x}_i, \mathbf{x})
-+ b
+\alpha_i t_i k(x_i,x) + b
 \right)
 $$
 
-Implementation steps:
-
-- Compute test–support kernel matrix
-
-$$
-K_{\text{test,sv}} \in \mathbb{R}^{n_{\text{test}} \times N_{sv}}
-$$
-
-- Multiply by $(\boldsymbol{\alpha}_{sv} \odot \mathbf{t}_{sv})$
-- Add $b$
-- Apply `sign()`
-
-Inference cost:
-
-$$
-\mathcal{O}(N_{sv})
-$$
+Only support vectors contribute to the prediction.
 
 ---
 
-## Task 3: Multiclass Classification — One-vs-Rest vs One-vs-One
+## Prediction Pipeline
 
-### One-vs-Rest (OvR)
+1. Compute kernel matrix between **test samples and support vectors**
 
-- Train $K = 10$ binary classifiers
-- Each classifier separates one class vs all others
-- Choose class with highest decision score
+$$
+K_{test,sv} \in \mathbb{R}^{n_{test} \times N_{sv}}
+$$
 
-### One-vs-One (OvO)
+2. Multiply by the weighted coefficients
 
-- Train $\binom{10}{2} = 45$ binary classifiers
-- Each classifier trained on only two classes
-- Prediction by majority vote
+$$
+(\alpha_{sv} \odot t_{sv})
+$$
+
+3. Add bias \(b\)
+
+4. Apply `sign()` to obtain the predicted label.
 
 ---
 
-### Results (RBF kernel, $C = 1.0$)
+## Computational Complexity
+
+Prediction complexity is
+
+$$
+O(N_{sv})
+$$
+
+Therefore, the number of support vectors directly impacts inference time.
+
+---
+
+# Task 3 — Multiclass Classification
+
+Because SVM is a **binary classifier**, two strategies were implemented for the 10-class dataset.
+
+---
+
+## One-vs-Rest (OvR)
+
+- Train **10 classifiers**
+- Each classifier separates **one class vs all others**
+- Prediction selects the class with the **highest decision score**
+
+---
+
+## One-vs-One (OvO)
+
+- Train classifiers for **every pair of classes**
+
+Total classifiers:
+
+$$
+\binom{10}{2} = 45
+$$
+
+Each classifier is trained using only the two relevant classes.
+
+Prediction is determined by **majority voting** across all classifiers.
+
+---
+
+# Results
+
+RBF kernel with
+
+$$
+C = 1.0
+$$
+
+was used for the comparison.
 
 | Metric | One-vs-Rest | One-vs-One |
-|--------|------------|------------|
+|------|------|------|
 | Classifiers trained | 10 | 45 |
 | Training time | 87.4 s | 7.3 s |
 | Prediction time | 0.07 s | 0.24 s |
-| Overall accuracy | 66.00% | 73.00% |
+| Overall accuracy | 66.0% | 73.0% |
 
 ---
 
-### Per-Class Accuracy
+## Per-Class Accuracy
 
 | Class | OvR | OvO |
-|--------|------|------|
+|------|------|------|
 | T-shirt/top | 58.82% | 58.82% |
 | Trouser | 91.67% | 91.67% |
 | Pullover | 0.00% | 65.22% |
@@ -186,120 +260,42 @@ $$
 
 ---
 
-### Analysis
+## Discussion
 
-- OvO improves accuracy by 7 percentage points.
-- OvR fails on Pullover and Shirt (0%).
-- OvR struggles because the "rest" class is heterogeneous.
-- OvO simplifies each boundary to pairwise separation.
-- OvO trains faster because each QP is smaller.
-- OvO predicts slower due to voting across 45 models.
+The **One-vs-One strategy improved accuracy by 7 percentage points**.
 
----
+The One-vs-Rest model failed on **Pullover** and **Shirt**, achieving **0% accuracy**. This occurs because the negative class contains a heterogeneous mixture of nine categories.
 
-## Task 4: Hyperparameter Tuning — Regularization Parameter $C$
+In contrast, OvO reduces each problem to **pairwise classification**, which produces simpler decision boundaries.
 
-$C$ controls the margin–slack tradeoff:
-
-- Large $C$: narrow margin, high variance
-- Small $C$: wider margin, more regularization
-
-### Strategy
-
-- 3-fold stratified cross-validation
-- 400-sample balanced subset
-- OvR used for efficiency
+Although OvO trains faster due to smaller optimization problems, prediction requires evaluating **45 classifiers**, which increases inference time.
 
 ---
 
-### Stage 1 — Coarse Search
+# Task 4 — Hyperparameter Tuning (Regularization Parameter C)
+
+The parameter \(C\) controls the tradeoff between **margin width and classification error**.
+
+- Large \(C\): narrow margin, lower tolerance for errors  
+- Small \(C\): wider margin, stronger regularization  
+
+---
+
+## Cross-Validation Strategy
+
+- **3-fold stratified cross-validation**
+- **400-sample balanced subset**
+- **OvR classifier**
+
+---
+
+## Stage 1 — Coarse Search
+
+Search range:
 
 $$
-C \in [0.1, 10^{4}]
+C \in [0.1, 10^4]
 $$
 
 ```python
 np.logspace(-1, 4, 12)
-```
-
----
-
-### Stage 2 — Fine Search
-
-$$
-C \in
-\left[
-10^{\log_{10}(C^*) - 0.5},
-10^{\log_{10}(C^*) + 0.5}
-\right]
-$$
-
-```python
-np.logspace(np.log10(C_star) - 0.5,
-            np.log10(C_star) + 0.5,
-            8)
-```
-
----
-
-### Results
-
-| Stage | Best C | CV Accuracy |
-|--------|--------|------------|
-| Coarse | 433 | 79.00% ± 0.98% |
-| Fine | 367.2 | 79.50% ± 0.87% |
-
-Final choice:
-
-$$
-C = 367.2
-$$
-
----
-
-## Task 5: Confusion Matrix Observations
-
-Final model:
-
-- OvR
-- $C = 367.2$
-- RBF kernel
-- $\gamma = 10^{-4}$
-- Trained on 1800 samples
-- Tested on 200 samples
-
-### Observations
-
-Well-separated classes:
-- Trouser
-- Sandal
-- Sneaker
-- Bag
-- Ankle boot
-
-Confusable classes:
-- T-shirt/top
-- Shirt
-- Pullover
-- Coat
-
-Errors are concentrated among visually similar garments.
-
----
-
-## Summary
-
-| Task | Key Finding |
-|------|------------|
-| SVM Implementation | Dual QP via `cvxopt`; support vectors at $\alpha_i > 10^{-5}$ |
-| Prediction | $\mathcal{O}(N_{sv})$ inference |
-| OvR vs OvO | OvO +7% accuracy |
-| Hyperparameter Tuning | Optimal $C \approx 367$ |
-| Confusion Analysis | Errors among similar top-wear categories |
-
----
-
-**Dataset:** Fashion-MNIST (2,000 samples)  
-**Kernel:** RBF ($\gamma = 10^{-4}$)  
-**Final $C$:** 367.2  
-**Implementation:** NumPy + cvxopt
